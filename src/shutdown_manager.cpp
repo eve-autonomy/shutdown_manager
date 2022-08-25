@@ -54,7 +54,7 @@ void ShutdownManager::onShutdownButton(const VehicleButton::ConstSharedPtr msg)
     case NodeStatus::WAITING_FOR_BUTTON_PRESS:
       if (msg->hold_down_time >= time_required_to_release_button_) {
         time_to_start_pressing_button_ = msg->stamp;
-        publishReservationLampState(true);
+        publishReservationLampState(StateLock::STATE_STANDBY_FOR_SHUTDOWN);
         current_state_ = NodeStatus::WAITING_FOR_BUTTON_RELEASE;
       }
       break;
@@ -65,14 +65,16 @@ void ShutdownManager::onShutdownButton(const VehicleButton::ConstSharedPtr msg)
       break;
     case NodeStatus::SHUTDOWN_RECEPTION:
       if (msg->data) {
+        publishReservationLampState(StateLock::STATE_START_OF_SHUTDOWN);
         const auto ret = system("systemctl poweroff");
         if (!WIFEXITED(ret) || WEXITSTATUS(ret) != 0) {
           RCLCPP_ERROR_THROTTLE(
             this->get_logger(),
             *this->get_clock(), 1.0,
             "[shutdown_manager] System shutdown ERROR!!! ");
+          publishReservationLampState(StateLock::STATE_STANDBY_FOR_SHUTDOWN);
         } else {
-          current_state_ = NodeStatus::START_OF_SHUTDOWN;
+          current_state_ = NodeStatus::SHUTDOWN_IN_PROGRESS;
         }
       }
       break;
@@ -81,15 +83,11 @@ void ShutdownManager::onShutdownButton(const VehicleButton::ConstSharedPtr msg)
   }
 }
 
-void ShutdownManager::publishReservationLampState(const bool is_standby_for_shutdown)
+void ShutdownManager::publishReservationLampState(const uint16_t msg_state)
 {
   StateLock msg;
   msg.stamp = this->now();
-  if (is_standby_for_shutdown) {
-    msg.state = StateLock::STATE_STANDBY_FOR_SHUTDOWN;
-  } else {
-    msg.state = StateLock::STATE_INACTIVE_FOR_SHUTDOWN;
-  }
+  msg.state = msg_state;
   pub_delivery_reservation_state_->publish(msg);
 }
 
@@ -106,7 +104,7 @@ void ShutdownManager::onTimer(void)
       this->get_logger(),
       *this->get_clock(), 1.0,
       "[shutdown_manager] Timeout for shutdown standby ");
-    publishReservationLampState(false);
+    publishReservationLampState(StateLock::STATE_INACTIVE_FOR_SHUTDOWN);
     current_state_ = NodeStatus::WAITING_FOR_BUTTON_PRESS;
   }
 }

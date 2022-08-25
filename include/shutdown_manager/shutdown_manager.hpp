@@ -43,7 +43,7 @@ private:
     WAITING_FOR_BUTTON_PRESS,
     WAITING_FOR_BUTTON_RELEASE,
     SHUTDOWN_RECEPTION,
-    START_OF_SHUTDOWN
+    SHUTDOWN_IN_PROGRESS
   };
 
   NodeStatus current_state_ = NodeStatus::WAITING_FOR_BUTTON_PRESS;
@@ -60,7 +60,7 @@ private:
   rclcpp::Subscription<VehicleButton>::SharedPtr sub_shutdown_button_;
 
   void onShutdownButton(const VehicleButton::ConstSharedPtr msg);
-  void publishReservationLampState(const bool is_standby_for_shutdown);
+  void publishReservationLampState(const uint16_t msg_state);
   void onTimer(void);
 };
 
