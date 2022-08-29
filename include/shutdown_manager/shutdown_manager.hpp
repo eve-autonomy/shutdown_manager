@@ -25,12 +25,12 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "autoware_state_machine_msgs/msg/vehicle_button.hpp"
-#include "autoware_state_machine_msgs/msg/state_lock.hpp"
+#include "shutdown_manager_msgs/msg/state_shutdown.hpp"
 
 namespace shutdown_manager
 {
-using autoware_state_machine_msgs::msg::StateLock;
 using autoware_state_machine_msgs::msg::VehicleButton;
+using shutdown_manager_msgs::msg::StateShutdown;
 
 class ShutdownManager : public rclcpp::Node
 {
@@ -38,29 +38,25 @@ public:
   explicit ShutdownManager(const rclcpp::NodeOptions & options);
 
 private:
-  enum class NodeStatus
-  {
-    WAITING_FOR_BUTTON_PRESS,
-    WAITING_FOR_BUTTON_RELEASE,
-    SHUTDOWN_RECEPTION,
-    SHUTDOWN_IN_PROGRESS
-  };
 
-  NodeStatus current_state_ = NodeStatus::WAITING_FOR_BUTTON_PRESS;
+  uint16_t current_state_ = StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN;
   float time_required_to_release_button_ = 5.0;
   float timeout_period_before_shutdown_aborts_ = 10.0;
   builtin_interfaces::msg::Time time_to_start_pressing_button_;
+  bool button_data_ = false;
+  float button_hold_down_time = 0.0;
+  bool shutdown_executed_ = false;
 
   rclcpp::TimerBase::SharedPtr timer_;
 
   // Publisher
-  rclcpp::Publisher<StateLock>::SharedPtr pub_delivery_reservation_state_;
+  rclcpp::Publisher<StateShutdown>::SharedPtr pub_shutdown_state_;
 
   // Subscription
   rclcpp::Subscription<VehicleButton>::SharedPtr sub_shutdown_button_;
 
   void onShutdownButton(const VehicleButton::ConstSharedPtr msg);
-  void publishReservationLampState(const uint16_t msg_state);
+  void publishShutdownState(const uint16_t msg_state);
   void onTimer(void);
 };
 

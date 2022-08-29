@@ -15,10 +15,14 @@
 -->
 
 <launch>
+    <arg name="time_required_to_release_button" default="5.0" />
+    <arg name="timeout_period_before_shutdown_aborts" default="10.0" />
+
     <node pkg="shutdown_manager" exec="shutdown_manager_node" name="shutdown_manager" output="screen">
       <param name="use_sim_time" value="$(env AW_ROS2_USE_SIM_TIME false)" />
+      <param name="time_required_to_release_button" value="$(var time_required_to_release_button)" />
+      <param name="timeout_period_before_shutdown_aborts" value="$(var timeout_period_before_shutdown_aborts)" />
       <remap from="input/shutdown_button" to="/shutdown_button" />
-      <remap from="output/lock_state" to="/shutdown_manager/state" />
-      <param from="$(find-pkg-share shutdown_manager)/config/shutdown_manager.param.yaml" />
+      <remap from="output/state" to="/shutdown_manager/state" />
     </node>
 </launch>

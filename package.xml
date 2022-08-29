@@ -29,6 +29,7 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>autoware_state_machine_msgs</depend>
+  <depend>shutdown_manager_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

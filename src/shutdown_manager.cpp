@@ -29,8 +29,8 @@ ShutdownManager::ShutdownManager(const rclcpp::NodeOptions & options = rclcpp::N
     "input/shutdown_button", rclcpp::QoS{1}.transient_local(),
     std::bind(&ShutdownManager::onShutdownButton, this, _1));
 
-  pub_delivery_reservation_state_ = this->create_publisher<StateLock>(
-    "output/lock_state", rclcpp::QoS{3}.transient_local());
+  pub_shutdown_state_ = this->create_publisher<StateShutdown>(
+    "output/state", rclcpp::QoS{3}.transient_local());
 
   time_required_to_release_button_ = this->declare_parameter<float>(
     "time_required_to_release_button", 5.0);
@@ -50,63 +50,65 @@ ShutdownManager::ShutdownManager(const rclcpp::NodeOptions & options = rclcpp::N
 
 void ShutdownManager::onShutdownButton(const VehicleButton::ConstSharedPtr msg)
 {
+  button_data_ = msg->data;
+  button_hold_down_time = msg->hold_down_time;
+}
+
+void ShutdownManager::publishShutdownState(const uint16_t msg_state)
+{
+  StateShutdown msg;
+  msg.stamp = this->now();
+  msg.state = msg_state;
+  pub_shutdown_state_->publish(msg);
+}
+
+void ShutdownManager::onTimer(void)
+{
   switch (current_state_) {
-    case NodeStatus::WAITING_FOR_BUTTON_PRESS:
-      if (msg->hold_down_time >= time_required_to_release_button_) {
-        time_to_start_pressing_button_ = msg->stamp;
-        publishReservationLampState(StateLock::STATE_STANDBY_FOR_SHUTDOWN);
-        current_state_ = NodeStatus::WAITING_FOR_BUTTON_RELEASE;
+    case StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN:
+      if (button_data_ && (button_hold_down_time >= time_required_to_release_button_)) {
+        time_to_start_pressing_button_ = this->now();
+        current_state_ = StateShutdown::STATE_STANDBY_FOR_SHUTDOWN;
+        publishShutdownState(current_state_);
       }
       break;
-    case NodeStatus::WAITING_FOR_BUTTON_RELEASE:
-      if (msg->data) {
-        current_state_ = NodeStatus::SHUTDOWN_RECEPTION;
+    case StateShutdown::STATE_STANDBY_FOR_SHUTDOWN: {
+      const auto time_diff = this->now() - time_to_start_pressing_button_;
+      if (time_diff.seconds() > timeout_period_before_shutdown_aborts_) {
+        RCLCPP_WARN_THROTTLE(
+          this->get_logger(),
+          *this->get_clock(), 1.0,
+          "[shutdown_manager] Timeout for shutdown standby ");
+        current_state_ = StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN;
+        publishShutdownState(current_state_);
+      }
+      if (button_data_) {
+        current_state_ = StateShutdown::STATE_START_OF_SHUTDOWN;
+        publishShutdownState(current_state_);
       }
       break;
-    case NodeStatus::SHUTDOWN_RECEPTION:
-      if (msg->data) {
-        publishReservationLampState(StateLock::STATE_START_OF_SHUTDOWN);
+    }
+    case StateShutdown::STATE_START_OF_SHUTDOWN: {
+      if (!shutdown_executed_) {
         const auto ret = system("systemctl poweroff");
         if (!WIFEXITED(ret) || WEXITSTATUS(ret) != 0) {
           RCLCPP_ERROR_THROTTLE(
             this->get_logger(),
             *this->get_clock(), 1.0,
-            "[shutdown_manager] System shutdown ERROR!!! ");
-          publishReservationLampState(StateLock::STATE_STANDBY_FOR_SHUTDOWN);
+            "[shutdown_manager] System shutdown ERROR!!! IFEXITED: %d, EXITSTATUS: %d ",
+            WIFEXITED(ret), WEXITSTATUS(ret));
+          current_state_ = StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN;
+          publishShutdownState(current_state_);
         } else {
-          current_state_ = NodeStatus::SHUTDOWN_IN_PROGRESS;
+          shutdown_executed_ = true;
         }
       }
       break;
+    }
     default:
       break;
   }
-}
-
-void ShutdownManager::publishReservationLampState(const uint16_t msg_state)
-{
-  StateLock msg;
-  msg.stamp = this->now();
-  msg.state = msg_state;
-  pub_delivery_reservation_state_->publish(msg);
-}
-
-void ShutdownManager::onTimer(void)
-{
-  if ((current_state_ != NodeStatus::WAITING_FOR_BUTTON_RELEASE) &&
-    (current_state_ != NodeStatus::SHUTDOWN_RECEPTION))
-  {
-    return;
-  }
-  const auto time_diff = this->now() - time_to_start_pressing_button_;
-  if (time_diff.seconds() > timeout_period_before_shutdown_aborts_) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(),
-      *this->get_clock(), 1.0,
-      "[shutdown_manager] Timeout for shutdown standby ");
-    publishReservationLampState(StateLock::STATE_INACTIVE_FOR_SHUTDOWN);
-    current_state_ = NodeStatus::WAITING_FOR_BUTTON_PRESS;
-  }
+  button_data_ = false;
 }
 
 }  // namespace shutdown_manager
