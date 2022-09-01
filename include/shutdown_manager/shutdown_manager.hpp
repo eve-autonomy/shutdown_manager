@@ -39,12 +39,12 @@ public:
 
 private:
 
-  uint16_t current_state_ = StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN;
-  float time_required_to_release_button_ = 5.0;
-  float timeout_period_before_shutdown_aborts_ = 10.0;
+  uint16_t current_state_;
+  float time_required_to_release_button_;
+  float timeout_period_before_shutdown_aborts_;
   builtin_interfaces::msg::Time time_to_start_pressing_button_;
-  bool button_data_ = false;
-  float button_hold_down_time = 0.0;
+  bool button_data_;
+  float button_hold_down_time_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 

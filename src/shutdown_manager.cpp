@@ -25,6 +25,10 @@ ShutdownManager::ShutdownManager(const rclcpp::NodeOptions & options = rclcpp::N
 {
   using std::placeholders::_1;
 
+  current_state_ = StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN;
+  button_data_ = false;
+  button_hold_down_time_ = 0.0;
+
   sub_shutdown_button_ = this->create_subscription<VehicleButton>(
     "input/shutdown_button", rclcpp::QoS{1}.transient_local(),
     std::bind(&ShutdownManager::onShutdownButton, this, _1));
@@ -51,7 +55,7 @@ ShutdownManager::ShutdownManager(const rclcpp::NodeOptions & options = rclcpp::N
 void ShutdownManager::onShutdownButton(const VehicleButton::ConstSharedPtr msg)
 {
   button_data_ = msg->data;
-  button_hold_down_time = msg->hold_down_time;
+  button_hold_down_time_ = msg->hold_down_time;
 }
 
 void ShutdownManager::publishShutdownState(const uint16_t msg_state)
@@ -66,7 +70,7 @@ void ShutdownManager::onTimer(void)
 {
   switch (current_state_) {
     case StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN:
-      if (button_data_ && (button_hold_down_time >= time_required_to_release_button_)) {
+      if (button_data_ && (button_hold_down_time_ >= time_required_to_release_button_)) {
         time_to_start_pressing_button_ = this->now();
         current_state_ = StateShutdown::STATE_STANDBY_FOR_SHUTDOWN;
       }
