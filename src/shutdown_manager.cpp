@@ -69,7 +69,6 @@ void ShutdownManager::onTimer(void)
       if (button_data_ && (button_hold_down_time >= time_required_to_release_button_)) {
         time_to_start_pressing_button_ = this->now();
         current_state_ = StateShutdown::STATE_STANDBY_FOR_SHUTDOWN;
-        publishShutdownState(current_state_);
       }
       break;
     case StateShutdown::STATE_STANDBY_FOR_SHUTDOWN: {
@@ -80,11 +79,9 @@ void ShutdownManager::onTimer(void)
           *this->get_clock(), 1.0,
           "[shutdown_manager] Timeout for shutdown standby ");
         current_state_ = StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN;
-        publishShutdownState(current_state_);
       }
       if (button_data_) {
         current_state_ = StateShutdown::STATE_START_OF_SHUTDOWN;
-        publishShutdownState(current_state_);
       }
       break;
     }
@@ -98,7 +95,6 @@ void ShutdownManager::onTimer(void)
             "[shutdown_manager] System shutdown ERROR!!! IFEXITED: %d, EXITSTATUS: %d ",
             WIFEXITED(ret), WEXITSTATUS(ret));
           current_state_ = StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN;
-          publishShutdownState(current_state_);
         } else {
           shutdown_executed_ = true;
         }
@@ -108,6 +104,7 @@ void ShutdownManager::onTimer(void)
     default:
       break;
   }
+  publishShutdownState(current_state_);
   button_data_ = false;
 }
 
