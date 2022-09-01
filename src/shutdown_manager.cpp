@@ -86,18 +86,16 @@ void ShutdownManager::onTimer(void)
       break;
     }
     case StateShutdown::STATE_START_OF_SHUTDOWN: {
-      if (!shutdown_executed_) {
-        const auto ret = system("systemctl poweroff");
-        if (!WIFEXITED(ret) || WEXITSTATUS(ret) != 0) {
-          RCLCPP_ERROR_THROTTLE(
-            this->get_logger(),
-            *this->get_clock(), 1.0,
-            "[shutdown_manager] System shutdown ERROR!!! IFEXITED: %d, EXITSTATUS: %d ",
-            WIFEXITED(ret), WEXITSTATUS(ret));
-          current_state_ = StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN;
-        } else {
-          shutdown_executed_ = true;
-        }
+      const auto ret = system("systemctl poweroff");
+      if (!WIFEXITED(ret) || WEXITSTATUS(ret) != 0) {
+        RCLCPP_ERROR_THROTTLE(
+          this->get_logger(),
+          *this->get_clock(), 1.0,
+          "[shutdown_manager] System shutdown ERROR!!! IFEXITED: %d, EXITSTATUS: %d ",
+          WIFEXITED(ret), WEXITSTATUS(ret));
+        current_state_ = StateShutdown::STATE_INACTIVE_FOR_SHUTDOWN;
+      } else {
+        current_state_ = StateShutdown::STATE_SUCCESSFUL_SHUTDOWN_INITIATION;
       }
       break;
     }

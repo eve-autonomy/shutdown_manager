@@ -45,7 +45,6 @@ private:
   builtin_interfaces::msg::Time time_to_start_pressing_button_;
   bool button_data_ = false;
   float button_hold_down_time = 0.0;
-  bool shutdown_executed_ = false;
 
   rclcpp::TimerBase::SharedPtr timer_;
 
