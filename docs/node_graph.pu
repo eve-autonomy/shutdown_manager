@@ -1,0 +1,11 @@
+@startuml
+
+usecase "/button_output_selector"
+usecase "/shutdown_manager" #LightCoral
+usecase "/delivery_reservation_lamp_manager"
+
+(/button_output_selector) -> (/shutdown_manager) : /shutdown_button
+
+(/shutdown_manager) -> (/delivery_reservation_lamp_manager) : /shutdown_manager/state
+
+@enduml
