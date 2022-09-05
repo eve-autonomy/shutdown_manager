@@ -1,0 +1,16 @@
+@startuml
+
+[*] --> STATE_INACTIVE_FOR_SHUTDOWN
+STATE_INACTIVE_FOR_SHUTDOWN --> STATE_STANDBY_FOR_SHUTDOWN : press and release button \n(hold down time for T0 time)
+STATE_STANDBY_FOR_SHUTDOWN --> STATE_START_OF_SHUTDOWN : press button again
+STATE_STANDBY_FOR_SHUTDOWN --> STATE_INACTIVE_FOR_SHUTDOWN : T1 timeout
+STATE_START_OF_SHUTDOWN --> STATE_INACTIVE_FOR_SHUTDOWN: shutdown failure
+STATE_START_OF_SHUTDOWN --> STATE_SUCCESSFUL_SHUDOWN_INITIATION : success of shutdown initiation
+STATE_SUCCESSFUL_SHUDOWN_INITIATION --> [*]
+
+STATE_INACTIVE_FOR_SHUTDOWN : Wait for button to be pressed.
+STATE_STANDBY_FOR_SHUTDOWN : Standby for shutdown execution.
+STATE_START_OF_SHUTDOWN : Shutdown is successfully accepted and start shutdown.
+STATE_SUCCESSFUL_SHUDOWN_INITIATION : Shutdown has been initiated successfully and is shutting down.
+
+@enduml
